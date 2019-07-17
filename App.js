@@ -8,7 +8,7 @@ export default class  App extends Component {
   constructor() {
     super()
     this.manager = new BleManager()
-    this.state = {info: "", values: {}}
+    this.state = {info: "", values: {}, devices : [], deleteDevices : []}
     this.prefixUUID = "f000aa"
     this.suffixUUID = "-0451-4000-b000-000000000000"
     this.sensors = {
@@ -45,6 +45,31 @@ export default class  App extends Component {
     this.setState({values: {...this.state.values, [key]: value}})
   }
 
+  // store devices
+  storeDevices = (devices,device) => {
+      if (devices.length != 0){
+        if (!devices.map(d=>d.id).includes(device.id))
+        {
+          console.log('new device:' + device.name);
+          this.setState({devices : devices.concat(device)});
+        }
+        else
+        {
+          ;
+        }
+           
+      }
+      else{
+            console.log('first scanned device: '+ device.name);
+            this.setState({devices : devices.concat(device)});
+      }
+  }
+  // refresh devices
+  refreshDevices = (devices,device) => {
+    ;
+  }
+
+
   componentWillMount() {
     if (Platform.OS === 'ios') {
       this.manager.onStateChange((state) => {
@@ -59,14 +84,17 @@ export default class  App extends Component {
     this.manager.startDeviceScan(null,
                                  null, (error, device) => {
       this.info("Scanning...")
-      console.log(device)
+     // console.log(device)
 
       if (error) {
         this.error(error.message)
         return
       }
 
-      if (device.name === 'TI BLE Sensor Tag' || device.name === 'SensorTag') {
+      this.storeDevices(this.state.devices, device);
+      this.refreshDevices(this.state.devices, device);
+
+    /*  if (device.name === 'TI BLE Sensor Tag' || device.name === 'SensorTag') {
         this.info("Connecting to TI Sensor")
         this.manager.stopDeviceScan()
         device.connect()
@@ -83,7 +111,7 @@ export default class  App extends Component {
           }, (error) => {
             this.error(error.message)
           })
-      }
+      } */
     });
   }
 
@@ -116,7 +144,28 @@ render(){
                {this.sensors[key] + ": " + (this.state.values[this.notifyUUID(key)] || "-")}
              </Text>
     })}
+
+
+  <View>
+    {this.state.devices.map(device => {
+      return <Text key={device.id.toString()}>
+                {device.name + ": " + device.id}
+            </Text>
+    })}
   </View>
+
+  <View>
+    <Text>Delete List</Text>
+    {this.state.deleteDevices.map(device => {
+      return <Text key={device.id.toString()}>
+                {device.name + ": " + device.id}
+            </Text>
+    })}
+  </View>
+
+  </View>  
+  
+  
   );
 }
   
