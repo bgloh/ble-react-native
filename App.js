@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import { StyleSheet, Text, View, Button, Platform } from 'react-native';
+import { StyleSheet, Text, View, Platform, Button } from 'react-native';
 import { BleManager } from "react-native-ble-plx"
 // ...
 const manager = new BleManager()
@@ -47,41 +47,26 @@ export default class  App extends Component {
 
   // store devices
   storeDevices = (devices,device) => {
-      if (devices.length != 0){
-        if (!devices.map(d=>d.id).includes(device.id) && device.name != null)
-        {
-          console.log('new device:' + device.name);
+    if (devices.length != 0){
+      if (!devices.map(d=>d.id).includes(device.id) && device.name != null)
+      {
+        console.log('new device:' + device.name);
+        this.setState({devices : devices.concat(device)});
+      }
+         
+    }
+    else{
+          console.log('first scanned device: '+ device.name);
           this.setState({devices : devices.concat(device)});
-        }
-           
-      }
-      else{
-            console.log('first scanned device: '+ device.name);
-            this.setState({devices : devices.concat(device)});
-      }
-  }
-  // refresh devices
-  isDeviceInDevicesList = (ds,d) => {
-    return ds.map(d=>d.id).includes(d.id);
-  }
-
-  deviceInclusionCheck = (ds, d)=>{
-    let dList = [];
-    resetCount = ()=>this.state.count=0;
-    getCount = ()=>this.state.count;
-
-    deviceList = () => {
-      if (this.isDeviceInDevicesList(ds,d))
-    {
-      //dList.concat(d);
-      this.setState({count: this.state.count+=1})
-      this.setState({deleteDevices: dList.concat(d)})
     }
   }
-    return {deviceList : deviceList, getCount: getCount}
+
+  stopScan = ()=>{
+    this.manager.stopDeviceScan();
+    this.info('Stop scanning ....');
   }
 
-  
+
 
 
   componentWillMount() {
@@ -90,39 +75,46 @@ export default class  App extends Component {
         if (state === 'PoweredOn') this.scanAndConnect()
       })
     } else {
-      this.scanAndConnect()
+      //this.scanAndConnect()
+     this.scan()
+      // flush found list every 60 seconds
+    setInterval(()=>this.setState({devices: [] }), 60000)
     }
   }
 
-  scanAndConnect() {
-   
-
+  scan() {
     this.manager.startDeviceScan(null,
                                  null, (error, device) => {
-      this.info("Scanning...")
-    
+      this.info("Scanning... from scan method")
+      //console.log(device)
 
       if (error) {
         this.error(error.message)
         return
       }
 
-      // Something i'm working on....
+      this.storeDevices(this.state.devices,device);
 
-      this.storeDevices(this.state.devices, device);
+      //setTimeout(this.manager.stopDeviceScan(), 30000);
 
-      let check =this.deviceInclusionCheck(this.state.devices, device);
-      if (this.state.devices.length >2)
-      {
-       
-        check.deviceList();
-        console.log('counter:'+ check.getCount())
-       
+
+    });
+  }
+
+  scanAndConnect() {
+    this.manager.startDeviceScan(null,
+                                 null, (error, device) => {
+      this.info("Scanning...")
+      //console.log(device)
+
+      if (error) {
+        this.error(error.message)
+        return
       }
-      
-      
 
-    /*  if (device.name === 'TI BLE Sensor Tag' || device.name === 'SensorTag') {
+      this.storeDevices(this.state.devices,device);
+
+      if (device.name === 'TI BLE Sensor Tag' || device.name === 'SensorTag') {
         this.info("Connecting to TI Sensor")
         this.manager.stopDeviceScan()
         device.connect()
@@ -139,7 +131,7 @@ export default class  App extends Component {
           }, (error) => {
             this.error(error.message)
           })
-      } */
+      } 
     });
   }
 
@@ -165,38 +157,40 @@ export default class  App extends Component {
 
 render(){
   return (
-    <View>
-    <Text>{this.state.info}</Text>
+    <View style={styles.container}>
+
+    <View style={styles.info}>
+      <Text>{this.state.info}</Text>
+    </View>  
+
+    <View style={styles.dataList}>
     {Object.keys(this.sensors).map((key) => {
       return <Text key={key}>
                {this.sensors[key] + ": " + (this.state.values[this.notifyUUID(key)] || "-")}
              </Text>
     })}
-
-
-  <View>
-    {this.state.devices.map(device => {
-      return <Text key={device.id.toString()}>
+    </View>
+    
+    <View style={styles.deviceList}>
+      {this.state.devices.map(device => {
+        return <Text key={device.id.toString()}>
                 {device.name + ": " + device.id}
             </Text>
-    })}
-  </View>
-  <View>
-    <Button title="SCAN" ></Button>
-  </View>
+        })}
+    </View>
 
-  <View>
-    <Text>Delete List</Text>
-    {this.state.deleteDevices.map(device => {
-      return <Text key={device.id.toString()}>
-                {device.name + ": " + device.id}
-            </Text>
-    })}
-  </View>
+    <View style={styles.buttonGroup}>
+      <View>
+          <Button title="SCAN and connect" onPress={()=>this.scanAndConnect()} ></Button>
+      </View>
+      <View>
+          <Button title="Stop scan" onPress={()=>this.stopScan()} ></Button>
+      </View>
+    </View>
+    
 
-  </View>  
-  
-  
+
+  </View>
   );
 }
   
@@ -206,7 +200,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+  //  alignItems: 'center',
+  //  justifyContent: 'center',
   },
+  buttonGroup :{
+    flex : 1,
+    flexDirection: 'column',
+    justifyContent: 'space-around',
+    backgroundColor : 'gray',
+    margin : 10,
+    padding : 10
+  },
+  deviceList : {
+    flex : 2,
+    backgroundColor : 'yellow',
+  },
+  dataList : {
+    flex :2,
+    backgroundColor: "blue"
+  },
+  info :{
+    flex: 1,
+    backgroundColor: 'red',
+    margin : 10,
+    padding : 5,
+  }
 });
