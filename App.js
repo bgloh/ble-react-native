@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import { StyleSheet, Text, View, Platform } from 'react-native';
+import { StyleSheet, Text, View, Button, Platform } from 'react-native';
 import { BleManager } from "react-native-ble-plx"
 // ...
 const manager = new BleManager()
@@ -8,7 +8,7 @@ export default class  App extends Component {
   constructor() {
     super()
     this.manager = new BleManager()
-    this.state = {info: "", values: {}, devices : [], deleteDevices : []}
+    this.state = {info: "", values: {}, devices : [], deleteDevices : [], count : 0}
     this.prefixUUID = "f000aa"
     this.suffixUUID = "-0451-4000-b000-000000000000"
     this.sensors = {
@@ -48,14 +48,10 @@ export default class  App extends Component {
   // store devices
   storeDevices = (devices,device) => {
       if (devices.length != 0){
-        if (!devices.map(d=>d.id).includes(device.id))
+        if (!devices.map(d=>d.id).includes(device.id) && device.name != null)
         {
           console.log('new device:' + device.name);
           this.setState({devices : devices.concat(device)});
-        }
-        else
-        {
-          ;
         }
            
       }
@@ -65,9 +61,27 @@ export default class  App extends Component {
       }
   }
   // refresh devices
-  refreshDevices = (devices,device) => {
-    ;
+  isDeviceInDevicesList = (ds,d) => {
+    return ds.map(d=>d.id).includes(d.id);
   }
+
+  deviceInclusionCheck = (ds, d)=>{
+    let dList = [];
+    resetCount = ()=>this.state.count=0;
+    getCount = ()=>this.state.count;
+
+    deviceList = () => {
+      if (this.isDeviceInDevicesList(ds,d))
+    {
+      //dList.concat(d);
+      this.setState({count: this.state.count+=1})
+      this.setState({deleteDevices: dList.concat(d)})
+    }
+  }
+    return {deviceList : deviceList, getCount: getCount}
+  }
+
+  
 
 
   componentWillMount() {
@@ -81,18 +95,32 @@ export default class  App extends Component {
   }
 
   scanAndConnect() {
+   
+
     this.manager.startDeviceScan(null,
                                  null, (error, device) => {
       this.info("Scanning...")
-     // console.log(device)
+    
 
       if (error) {
         this.error(error.message)
         return
       }
 
+      // Something i'm working on....
+
       this.storeDevices(this.state.devices, device);
-      this.refreshDevices(this.state.devices, device);
+
+      let check =this.deviceInclusionCheck(this.state.devices, device);
+      if (this.state.devices.length >2)
+      {
+       
+        check.deviceList();
+        console.log('counter:'+ check.getCount())
+       
+      }
+      
+      
 
     /*  if (device.name === 'TI BLE Sensor Tag' || device.name === 'SensorTag') {
         this.info("Connecting to TI Sensor")
@@ -152,6 +180,9 @@ render(){
                 {device.name + ": " + device.id}
             </Text>
     })}
+  </View>
+  <View>
+    <Button title="SCAN" ></Button>
   </View>
 
   <View>
