@@ -1,5 +1,7 @@
 import React, {Component} from 'react';
-import { StyleSheet, Text, View, Platform, Button } from 'react-native';
+import { StyleSheet, Text, View, Platform, Button, TouchableOpacity, ActivityIndicator  } from 'react-native';
+import { ToastAndroid  } from 'react-native';
+
 import { BleManager } from "react-native-ble-plx"
 // ...
 const manager = new BleManager()
@@ -8,7 +10,7 @@ export default class  App extends Component {
   constructor() {
     super()
     this.manager = new BleManager()
-    this.state = {info: "", values: {}, devices : [], deleteDevices : [], count : 0}
+    this.state = {info: "", values: {}, devices : [], deleteDevices : [], count : 0, opacity:0}
     this.prefixUUID = "f000aa"
     this.suffixUUID = "-0451-4000-b000-000000000000"
     this.sensors = {
@@ -43,6 +45,7 @@ export default class  App extends Component {
 
   updateValue(key, value) {
     this.setState({values: {...this.state.values, [key]: value}})
+    console.log(this.state.values);
   }
 
   // store devices
@@ -66,6 +69,39 @@ export default class  App extends Component {
     this.info('Stop scanning ....');
   }
 
+  selectAndConnect = (item) =>{ 
+    ToastAndroid.showWithGravity(
+      item + ' is selected .', ToastAndroid.SHORT, ToastAndroid.CENTER);
+    // device name to connect  
+    let nameOfDevice2Connect = 'SensorTag';
+    let foundDevice = false;
+    if (item === 'null')
+        ; // Do Nothing
+    else if(item === nameOfDevice2Connect)
+      {
+        device2Connect = this.state.devices.find(device=>device.name === nameOfDevice2Connect);
+        foundDevice = true;
+      }
+    
+    if (foundDevice)
+    {
+      this.manager.stopDeviceScan()
+      device2Connect.connect()
+        .then((device) => {
+          this.info("Discovering services and characteristics")
+          return device.discoverAllServicesAndCharacteristics()
+        })
+        .then((device) => {
+          this.info("Setting notifications")
+          return this.setupNotifications(device)
+        })
+        .then(() => {
+          this.info("Listening...")
+        }, (error) => {
+          this.error(error.message)
+        })  
+    }
+  };
 
 
 
@@ -79,6 +115,8 @@ export default class  App extends Component {
      this.scan()
       // flush found list every 60 seconds
     setInterval(()=>this.setState({devices: [] }), 60000)
+      // start ActivityIndicator
+      this.setState({opacity : 1});
     }
   }
 
@@ -86,7 +124,8 @@ export default class  App extends Component {
     this.manager.startDeviceScan(null,
                                  null, (error, device) => {
       this.info("Scanning... from scan method")
-      //console.log(device)
+      //stop Activity Indicator
+      this.setState({opacity : 0});
 
       if (error) {
         this.error(error.message)
@@ -161,6 +200,7 @@ render(){
 
     <View style={styles.info}>
       <Text>{this.state.info}</Text>
+      <ActivityIndicator size="large" opacity={this.state.opacity} ></ActivityIndicator>
     </View>  
 
     <View style={styles.dataList}>
@@ -172,20 +212,20 @@ render(){
     </View>
     
     <View style={styles.deviceList}>
+      <Text style={{textAlign:'center', fontWeight:'bold'}}>SCANNED DEVICES</Text>
       {this.state.devices.map(device => {
-        return <Text key={device.id.toString()}>
-                {device.name + ": " + device.id}
-            </Text>
-        })}
+        return  <TouchableOpacity  key={device.id} onPress={()=>this.selectAndConnect(device.name)}>
+                  <Text>
+                      {device.name + ": " + device.id}
+                  </Text>
+                </TouchableOpacity>
+       })}
     </View>
 
     <View style={styles.buttonGroup}>
-      <View>
-          <Button title="SCAN and connect" onPress={()=>this.scanAndConnect()} ></Button>
-      </View>
-      <View>
-          <Button title="Stop scan" onPress={()=>this.stopScan()} ></Button>
-      </View>
+        <TouchableOpacity onPress={()=>this.scanAndConnect()}>
+          <Text style={{textAlign:'center',fontSize:10}}>SCAN AND CONNECT</Text>
+        </TouchableOpacity>
     </View>
     
 
@@ -204,25 +244,24 @@ const styles = StyleSheet.create({
   //  justifyContent: 'center',
   },
   buttonGroup :{
-    flex : 1,
+    flex : 0.5,
+    backgroundColor : '#bdc3c7',borderRadius : 10, 
     flexDirection: 'column',
     justifyContent: 'space-around',
-    backgroundColor : 'gray',
-    margin : 10,
-    padding : 10
+    margin : 5,padding : 5,
   },
   deviceList : {
-    flex : 2,
-    backgroundColor : 'yellow',
+    flex : 2, margin : 5, padding : 5, borderColor : 'orange',
+    borderRadius : 5, borderWidth :1
   },
   dataList : {
     flex :2,
-    backgroundColor: "blue"
+    margin:5,
+    padding: 5,
   },
   info :{
     flex: 1,
-    backgroundColor: 'red',
-    margin : 10,
+    margin : 5,
     padding : 5,
   }
 });

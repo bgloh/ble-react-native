@@ -1,4 +1,4 @@
-#Wed Jul 17 11:03:48 KST 2019
-base.0=C\:\\Users\\Byoung Loh\\EXPO2\\ble-react-native\\android\\app\\build\\intermediates\\transforms\\dexMerger\\debug\\0
+#Thu Jul 18 11:14:29 KST 2019
+base.0=C\:\\Users\\Brian\\expo\\ble-react-native\\android\\app\\build\\intermediates\\transforms\\dexMerger\\debug\\0
 path.0=classes.dex
 renamed.0=classes.dex
